@@ -1,4 +1,5 @@
 import argparse
+import logging
 from pathlib import Path
 import shutil
 import sys
@@ -14,6 +15,31 @@ from src.tui import NavidromeSelectorApp
 setup_logger()
 
 console = Console()
+
+
+def create_backup(db_path: Path) -> Path | None:
+    """
+    Creates a backup of the SQLite database file.
+
+    Parameters
+    ----------
+    db_path : Path
+        The path to the original database file.
+
+    Returns
+    -------
+    Path | None
+        The path to the created backup or None if failed.
+    """
+    backup_path = db_path.with_suffix(db_path.suffix + ".bak")
+    try:
+        shutil.copy2(db_path, backup_path)
+        logging.info(f"Backup created at: {backup_path}")
+        console.print(f"[green]Backup created:[/green] {backup_path}")
+        return backup_path
+    except Exception as e:
+        logging.error(f"Failed to create backup: {e}")
+        return None
 
 
 def main():
@@ -34,21 +60,38 @@ def main():
         default=list(MERGE_STRATEGIES.keys())[0],
     )
 
+    backup_group = parser.add_mutually_exclusive_group()
+    backup_group.add_argument(
+        "-b",
+        "--backup",
+        action="store_true",
+        help="Force creation of a backup without asking",
+    )
+    backup_group.add_argument(
+        "-B",
+        "--no-backup",
+        action="store_true",
+        help="Skip backup creation entirely",
+    )
+
     args = parser.parse_args()
     db_file: Path = args.navidrome_db
     merge_strategy = MERGE_STRATEGIES[args.merge_strategy]
+    no_backup = args.no_backup
+    force_backup = args.backup
 
     if not db_file.exists() or not db_file.is_file():
         console.print(f"[red]Error:[/red] '{db_file}' does not exist.")
         sys.exit(1)
 
-    if Confirm.ask(
-        "This script will modify the database. Create a backup?",
-        default=True,
+    if force_backup or (
+        not no_backup
+        and Confirm.ask(
+            "This script will modify the database. Create a backup?",
+            default=True,
+        )
     ):
-        destination = db_file.with_suffix(db_file.suffix + ".bak")
-        shutil.copy2(db_file, destination)
-        console.print(f"[green]Backup created:[/green] {destination}")
+        create_backup(db_file)
 
     with DBQuery(db_file) as db:
         app = NavidromeSelectorApp(db, merge_strategy)
