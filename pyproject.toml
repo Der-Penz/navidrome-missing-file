@@ -1,0 +1,21 @@
+[project]
+name = "navidrome-missing-file"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "rapidfuzz>=3.14.5",
+    "rich>=15.0.0",
+    "textual>=8.2.3",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+    packages = ["src"]
+
+[project.scripts]
+cli = "src.main:main"
