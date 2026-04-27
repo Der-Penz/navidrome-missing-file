@@ -10,3 +10,4 @@ wheels/
 .venv
 app.log
 navidrome.db.bak
+navidrome.db
