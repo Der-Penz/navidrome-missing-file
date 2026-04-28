@@ -55,9 +55,24 @@ def main():
 
     parser.add_argument(
         "--merge-strategy",
+        "-s",
         help="Strategy to merge annotations (default: add)",
         choices=list(MERGE_STRATEGIES.keys()),
         default=list(MERGE_STRATEGIES.keys())[0],
+    )
+
+    parser.add_argument(
+        "--auto-missing",
+        "-m",
+        help="Automatically select the first missing file for merging without prompting",
+        action="store_true",
+    )
+
+    parser.add_argument(
+        "--auto-target",
+        "-t",
+        help="Automatically select the target song for merging without prompting (tries to find a suitable match based on metadata)",
+        action="store_true",
     )
 
     backup_group = parser.add_mutually_exclusive_group()
@@ -94,7 +109,9 @@ def main():
         create_backup(db_file)
 
     with DBQuery(db_file) as db:
-        app = NavidromeSelectorApp(db, merge_strategy)
+        app = NavidromeSelectorApp(
+            db, merge_strategy, args.auto_missing, args.auto_target
+        )
         app.run()
 
 

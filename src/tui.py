@@ -5,6 +5,7 @@ from rich.console import Console
 
 from src.file_selector import FileSelector
 from src.merge import Merge
+from src.target_matching import select_target_for_missing
 from textual.app import App
 
 from src.db_query import DBQuery, Song
@@ -35,10 +36,14 @@ class NavidromeSelectorApp(App):
     }
     """
 
-    def __init__(self, db: DBQuery, merge_strategy: Merge) -> None:
+    def __init__(
+        self, db: DBQuery, merge_strategy: Merge, auto_missing: bool, auto_target: bool
+    ) -> None:
         super().__init__()
         self.db = db
         self.merge_strategy = merge_strategy
+        self.auto_missing = auto_missing
+        self.auto_target = auto_target
 
     def on_ready(self) -> None:
         """Trigger the selection flow without blocking the main loop."""
@@ -48,17 +53,27 @@ class NavidromeSelectorApp(App):
         """This now runs in the background, keeping the UI alive."""
         try:
             while True:
-                missing = await self.select_file(
-                    missing=1, prompt_title="Select missing song"
-                )
+                if not self.auto_missing:
+                    missing = await self.select_file(
+                        missing=1, prompt_title="Select missing song"
+                    )
+                else:
+                    rows = self.db.find_files(missing=1)
+                    missing = rows[0] if rows else None
+                    logging.info(f"Auto-selected missing song: {missing}")
 
                 if not missing:
                     logging.info("Missing file selection cancelled. Exiting.")
                     break
 
-                target = await self.select_file(
-                    missing=0, prompt_title="Select replacement song"
-                )
+                if not self.auto_target:
+                    target = await self.select_file(
+                        missing=0, prompt_title="Select replacement song"
+                    )
+                else:
+                    rows = self.db.find_files(missing=1)
+                    target = select_target_for_missing(missing, rows) if rows else None
+                    logging.info(f"Auto-selected target song: {target}")
 
                 if target is None:
                     logging.info("Target file selection cancelled. Exiting.")

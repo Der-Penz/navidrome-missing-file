@@ -1,9 +1,6 @@
-import logging
-
 from rapidfuzz import fuzz, process
 from rich.text import Text
 from src.db_query import Song
-from textual import on
 from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.events import Key
@@ -12,13 +9,6 @@ from textual.widgets import Input, Static
 
 import asyncio
 from typing import List
-
-try:
-    from rapidfuzz import process, fuzz
-
-    RAPIDFUZZ_AVAILABLE = True
-except ImportError:
-    RAPIDFUZZ_AVAILABLE = False
 
 
 class FileSelector(Static):
@@ -41,7 +31,6 @@ class FileSelector(Static):
             asyncio.get_event_loop().create_future()
         )
 
-        # widgets placeholders (set in compose)
         self.search_input: Input | None = None
         self.body: Static | None = None
 
@@ -75,25 +64,17 @@ class FileSelector(Static):
             self.refresh_body()
             return
 
-        if RAPIDFUZZ_AVAILABLE:
-            choices = [r.search_text for r in self.rows]
-            results = process.extract_iter(
-                q, choices, scorer=fuzz.WRatio, score_cutoff=60
-            )
-            # results yields tuples: (match, score, index)
-            # collect indices sorted by score desc
-            ranked = sorted(results, key=lambda x: x[1], reverse=True)
-            indices = [idx for _, _, idx in ranked]
-            # keep unique and in order
-            seen = set()
-            new_filtered = []
-            for idx in indices:
-                if idx not in seen:
-                    seen.add(idx)
-                    new_filtered.append(self.rows[idx])
-            self.filtered = new_filtered
-        else:
-            self.filtered = [r for r in self.rows if q in r.search_text]
+        choices = [r.search_text for r in self.rows]
+        results = process.extract_iter(q, choices, scorer=fuzz.WRatio, score_cutoff=60)
+        ranked = sorted(results, key=lambda x: x[1], reverse=True)
+        indices = [idx for _, _, idx in ranked]
+        seen = set()
+        new_filtered = []
+        for idx in indices:
+            if idx not in seen:
+                seen.add(idx)
+                new_filtered.append(self.rows[idx])
+        self.filtered = new_filtered
 
         # clamp cursor
         self.cursor_index = (
