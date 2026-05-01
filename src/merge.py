@@ -1,5 +1,6 @@
 # make me a merge protocol class that has one merge function and takes source and target as arguments. The merge function should be able to handle the merging logic and return the merged result. The class should also
 
+from dataclasses import dataclass
 from typing import Protocol
 
 from src.db_query import Annotation
@@ -34,7 +35,7 @@ class AddMerge(Merge):
 class ReplaceMerge(Merge):
     def merge(self, source: Annotation, target: Annotation) -> Annotation:
         """Merge by taking all values from source, ignoring target."""
-        return source.copy()
+        return Annotation(**source.__dict__)
 
 
 MERGE_STRATEGIES: dict[str, Merge] = {
