@@ -12,8 +12,6 @@ from src.logger import setup_logger
 from src.merge import MERGE_STRATEGIES
 from src.tui import NavidromeSelectorApp
 
-setup_logger()
-
 console = Console()
 
 
@@ -89,6 +87,13 @@ def main():
         action="store_true",
     )
 
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        help="Enable verbose logging for debugging purposes",
+        action="store_true",
+    )
+
     backup_group = parser.add_mutually_exclusive_group()
     backup_group.add_argument(
         "-b",
@@ -108,6 +113,9 @@ def main():
     merge_strategy = MERGE_STRATEGIES[args.merge_strategy]
     no_backup = args.no_backup
     force_backup = args.backup
+
+    if args.verbose:
+        setup_logger()
 
     if not db_file.exists() or not db_file.is_file():
         console.print(f"[red]Error:[/red] '{db_file}' does not exist.")
