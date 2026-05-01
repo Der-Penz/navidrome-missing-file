@@ -75,7 +75,9 @@ class NavidromeSelectorApp(App):
 
                 if not self.auto_target:
                     target = await self.select_file(
-                        missing=0, prompt_title="Select replacement song"
+                        missing=0,
+                        prompt_title="Select replacement song",
+                        subtitle=f"Selected missing file: {missing.title} - {missing.artist}",
                     )
                 else:
                     rows = self.db.find_files(missing=0)
@@ -92,7 +94,9 @@ class NavidromeSelectorApp(App):
         finally:
             self.exit()
 
-    async def select_file(self, missing: int, prompt_title: str) -> Song | None:
+    async def select_file(
+        self, missing: int, prompt_title: str, subtitle: str = ""
+    ) -> Song | None:
         """
         Query the DB for files with given missing flag and present the virtual selector.
         Returns a lightweight dict (id,title,album,artist,path) or None if cancelled / empty.
@@ -106,7 +110,7 @@ class NavidromeSelectorApp(App):
             return None
 
         # create selector widget
-        selector = FileSelector(rows, title=prompt_title)
+        selector = FileSelector(rows, title=prompt_title, subtitle=subtitle)
         await self.mount(selector)
 
         # wait for the user's choice

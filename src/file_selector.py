@@ -20,11 +20,14 @@ class FileSelector(Static):
     }
     """
 
-    def __init__(self, rows: List[Song], title: str = "Select a file") -> None:
+    def __init__(
+        self, rows: List[Song], title: str = "Select a file", subtitle: str = ""
+    ) -> None:
         super().__init__()
         self.rows = rows
         self.filtered: List[Song] = rows[:]
         self.title = title
+        self.subtitle = subtitle
         self.cursor_index = 0
         self.window_lines = 15
         self.result_future: asyncio.Future[Song | None] = (
@@ -40,6 +43,8 @@ class FileSelector(Static):
                 placeholder=f"{self.title} (type to search…)", id="search"
             )
             yield self.search_input
+            if self.subtitle:
+                yield Static(Text(self.subtitle, style="dim"), id="subtitle")
             self.body = Static()
             yield self.body
 
