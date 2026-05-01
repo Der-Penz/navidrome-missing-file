@@ -67,7 +67,7 @@ class DBQuery:
             album = (r["album"] or "").strip()
             artist = (r["artist"] or "").strip()
             path = r["path"] or ""
-            search_text = f"{title} {album} {artist} {path}".lower()
+            search_text = f"{title} {album} {artist}".lower()
             songs.append(
                 Song(
                     id=r["id"],

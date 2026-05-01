@@ -1,6 +1,7 @@
 from rapidfuzz import fuzz, process
 from rich.text import Text
 from src.db_query import Song
+from src.fuzzy_search import fuzzy_filter_songs
 from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.events import Key
@@ -57,26 +58,7 @@ class FileSelector(Static):
         self.refresh_body()
 
     def filter_rows(self, query: str) -> None:
-        q = query.strip().lower()
-        if not q:
-            self.filtered = self.rows
-            self.cursor_index = 0
-            self.refresh_body()
-            return
-
-        choices = [r.search_text for r in self.rows]
-        results = process.extract_iter(q, choices, scorer=fuzz.WRatio, score_cutoff=60)
-        ranked = sorted(results, key=lambda x: x[1], reverse=True)
-        indices = [idx for _, _, idx in ranked]
-        seen = set()
-        new_filtered = []
-        for idx in indices:
-            if idx not in seen:
-                seen.add(idx)
-                new_filtered.append(self.rows[idx])
-        self.filtered = new_filtered
-
-        # clamp cursor
+        self.filtered = fuzzy_filter_songs(self.rows, query)
         self.cursor_index = (
             0 if not self.filtered else min(self.cursor_index, len(self.filtered) - 1)
         )
