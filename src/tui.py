@@ -44,6 +44,7 @@ class NavidromeSelectorApp(App):
         auto_missing: bool,
         auto_target: bool,
         auto_confirm: bool,
+        report: bool,
     ) -> None:
         super().__init__()
         self.db = db
@@ -52,6 +53,13 @@ class NavidromeSelectorApp(App):
         self.auto_target = auto_target
         self.auto_confirm = auto_confirm
         self.skipped_missing_ids: set[int] = set()
+        self.report = report
+
+        if self.report:
+            with open("merge_report.txt", "w") as f:
+                f.write(
+                    "Missing Title,Missing Artist,Missing Album,Missing ID,Target Title,Target Artist,Target Album,Target ID\n"
+                )
 
     def on_ready(self) -> None:
         """Trigger the selection flow without blocking the main loop."""
@@ -172,5 +180,12 @@ class NavidromeSelectorApp(App):
                 return
 
         self.db.replace_song(missing, target, combined)
+
+        if self.report:
+            with open("merge_report.txt", "a") as f:
+                f.write(
+                    f'"{missing.title}","{missing.artist}","{missing.album}",{missing.id},'
+                    f'"{target.title}","{target.artist}","{target.album}",{target.id}\n'
+                )
 
         self.notify("Merge successful!", severity="information")

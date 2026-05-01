@@ -82,6 +82,13 @@ def main():
         action="store_true",
     )
 
+    parser.add_argument(
+        "--report",
+        "-r",
+        help="Generate a report of all matched files",
+        action="store_true",
+    )
+
     backup_group = parser.add_mutually_exclusive_group()
     backup_group.add_argument(
         "-b",
@@ -117,7 +124,12 @@ def main():
 
     with DBQuery(db_file) as db:
         app = NavidromeSelectorApp(
-            db, merge_strategy, args.auto_missing, args.auto_target, args.auto_confirm
+            db,
+            merge_strategy,
+            args.auto_missing,
+            args.auto_target,
+            args.auto_confirm,
+            args.report,
         )
         app.run()
 
