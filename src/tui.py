@@ -51,6 +51,7 @@ class NavidromeSelectorApp(App):
         self.auto_missing = auto_missing
         self.auto_target = auto_target
         self.auto_confirm = auto_confirm
+        self.skipped_missing_ids: set[int] = set()
 
     def on_ready(self) -> None:
         """Trigger the selection flow without blocking the main loop."""
@@ -66,7 +67,13 @@ class NavidromeSelectorApp(App):
                     )
                 else:
                     rows = self.db.find_files(missing=1)
-                    missing = rows[0] if rows else None
+                    missing = None
+                    for row in rows:
+                        if row.id in self.skipped_missing_ids:
+                            continue
+                        missing = row
+                        break
+
                     logging.info(f"Auto-selected missing song: {missing}")
 
                 if not missing:
@@ -137,6 +144,7 @@ class NavidromeSelectorApp(App):
                 f"No annotation found for missing song '{missing.title}', aborting merge.",
                 severity="warning",
             )
+            self.skipped_missing_ids.add(missing.id)
             return
 
         anno_target = self.db.get_annotation(target, anno_missing.user_id)
@@ -146,6 +154,7 @@ class NavidromeSelectorApp(App):
                 f"No annotation found for target song '{target.title}', aborting merge.",
                 severity="warning",
             )
+            self.skipped_missing_ids.add(missing.id)
             return
 
         combined = self.merge_strategy.merge(anno_missing, anno_target)
@@ -159,6 +168,7 @@ class NavidromeSelectorApp(App):
                 accepted = False
             if not accepted:
                 self.notify("Merge cancelled.", severity="warning")
+                self.skipped_missing_ids.add(missing.id)
                 return
 
         self.db.replace_song(missing, target, combined)
