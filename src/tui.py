@@ -5,6 +5,7 @@ from rich.console import Console
 
 from src.file_selector import FileSelector
 from src.merge import Merge
+from src.merge_viewer import MergeViewer
 from src.target_matching import select_target_for_missing
 from textual.app import App
 
@@ -37,13 +38,19 @@ class NavidromeSelectorApp(App):
     """
 
     def __init__(
-        self, db: DBQuery, merge_strategy: Merge, auto_missing: bool, auto_target: bool
+        self,
+        db: DBQuery,
+        merge_strategy: Merge,
+        auto_missing: bool,
+        auto_target: bool,
+        auto_confirm: bool,
     ) -> None:
         super().__init__()
         self.db = db
         self.merge_strategy = merge_strategy
         self.auto_missing = auto_missing
         self.auto_target = auto_target
+        self.auto_confirm = auto_confirm
 
     def on_ready(self) -> None:
         """Trigger the selection flow without blocking the main loop."""
@@ -71,7 +78,7 @@ class NavidromeSelectorApp(App):
                         missing=0, prompt_title="Select replacement song"
                     )
                 else:
-                    rows = self.db.find_files(missing=1)
+                    rows = self.db.find_files(missing=0)
                     target = select_target_for_missing(missing, rows) if rows else None
                     logging.info(f"Auto-selected target song: {target}")
 
@@ -119,29 +126,36 @@ class NavidromeSelectorApp(App):
         return selected_song
 
     async def handle_merge(self, missing: Song, target: Song) -> None:
-        # Fetch annotations
-
         anno_missing = self.db.get_annotation(missing)
 
         if anno_missing is None:
             self.notify(
-                f"No annotation found for missing song '{missing.title}', using defaults.",
+                f"No annotation found for missing song '{missing.title}', aborting merge.",
                 severity="warning",
             )
-            exit(0)
+            return
 
         anno_target = self.db.get_annotation(target, anno_missing.user_id)
 
         if anno_target is None:
             self.notify(
-                f"No annotation found for target song '{target.title}', using defaults.",
+                f"No annotation found for target song '{target.title}', aborting merge.",
                 severity="warning",
             )
-            exit(0)
-
-        logging.debug(f"Merging missing {missing} with target {target}")
+            return
 
         combined = self.merge_strategy.merge(anno_missing, anno_target)
+        if not self.auto_confirm:
+            viewer = MergeViewer(missing, target, anno_missing, anno_target, combined)
+            await self.mount(viewer)
+
+            try:
+                accepted = await viewer.result_future
+            except asyncio.CancelledError:
+                accepted = False
+            if not accepted:
+                self.notify("Merge cancelled.", severity="warning")
+                return
 
         self.db.replace_song(missing, target, combined)
 

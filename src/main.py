@@ -75,6 +75,13 @@ def main():
         action="store_true",
     )
 
+    parser.add_argument(
+        "--auto-confirm",
+        "-c",
+        help="Automatically confirm the merge without prompting",
+        action="store_true",
+    )
+
     backup_group = parser.add_mutually_exclusive_group()
     backup_group.add_argument(
         "-b",
@@ -110,7 +117,7 @@ def main():
 
     with DBQuery(db_file) as db:
         app = NavidromeSelectorApp(
-            db, merge_strategy, args.auto_missing, args.auto_target
+            db, merge_strategy, args.auto_missing, args.auto_target, args.auto_confirm
         )
         app.run()
 

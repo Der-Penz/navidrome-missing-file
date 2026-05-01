@@ -18,10 +18,8 @@ class AddMerge(Merge):
         play_count = source.play_count + target.play_count
         rating = max(source.rating, target.rating)
         starred = source.starred or target.starred
-        starred_at = source.starred_at if source.starred else target.starred_at
-        rated_at = (
-            source.rated_at if source.rating >= target.rating else target.rated_at
-        )
+        starred_at = source.starred_at if source.starred_at else target.starred_at
+        rated_at = source.rated_at if source.rated_at else target.rated_at
 
         return Annotation(
             play_count=play_count,

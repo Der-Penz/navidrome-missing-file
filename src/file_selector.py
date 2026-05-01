@@ -1,4 +1,3 @@
-from rapidfuzz import fuzz, process
 from rich.text import Text
 from src.db_query import Song
 from src.fuzzy_search import fuzzy_filter_songs
