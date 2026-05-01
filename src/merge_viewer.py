@@ -123,5 +123,4 @@ class MergeViewer(Widget, can_focus=True):
             self.remove()
 
         elif event.key == "x":
-            self.remove()
-            self.app.exit()
+            exit(0)
