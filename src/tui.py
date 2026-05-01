@@ -54,6 +54,7 @@ class NavidromeSelectorApp(App):
         self.auto_confirm = auto_confirm
         self.skipped_missing_ids: set[int] = set()
         self.report = report
+        self.exit_app = False
 
         if self.report:
             with open("merge_report.txt", "w") as f:
@@ -69,6 +70,10 @@ class NavidromeSelectorApp(App):
         """This now runs in the background, keeping the UI alive."""
         try:
             while True:
+                if self.exit_app:
+                    logging.info("Exit flag set, terminating selection flow.")
+                    break
+
                 if not self.auto_missing:
                     missing = await self.select_file(
                         missing=1, prompt_title="Select missing song"
@@ -170,13 +175,12 @@ class NavidromeSelectorApp(App):
             viewer = MergeViewer(missing, target, anno_missing, anno_target, combined)
             await self.mount(viewer)
 
-            try:
-                accepted = await viewer.result_future
-            except asyncio.CancelledError:
-                accepted = False
-            if not accepted:
+            accepted = await viewer.result_future
+
+            if not accepted or accepted is None:
                 self.notify("Merge cancelled.", severity="warning")
                 self.skipped_missing_ids.add(missing.id)
+                self.exit_app = True
                 return
 
         self.db.replace_song(missing, target, combined)
