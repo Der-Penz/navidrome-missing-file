@@ -11,3 +11,5 @@ wheels/
 app.log
 navidrome.db.bak
 navidrome.db
+navidrome.db-wal
+navidrome.db-shm
