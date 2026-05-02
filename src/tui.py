@@ -136,6 +136,7 @@ class NavidromeSelectorApp(App):
         # wait for the user's choice
         try:
             selected_song = await selector.result_future
+            logging.debug(f"Selected song: {selected_song}")
         except asyncio.CancelledError:
             selected_song = None
 
@@ -154,10 +155,10 @@ class NavidromeSelectorApp(App):
 
         if anno_missing is None:
             self.notify(
-                f"No annotation found for missing song '{missing.title}', aborting merge.",
-                severity="warning",
+                f"No annotation found for missing song '{missing.title}', file will be deleted, since no data is connected to it.",
+                severity="information",
             )
-            self.skipped_missing_ids.add(missing.id)
+            self.db.delete_media_file(missing, commit=True)
             return
 
         anno_target = self.db.get_annotation(target, anno_missing.user_id)
@@ -168,6 +169,7 @@ class NavidromeSelectorApp(App):
                 severity="warning",
             )
             self.skipped_missing_ids.add(missing.id)
+
             return
 
         combined = self.merge_strategy.merge(anno_missing, anno_target)
@@ -177,10 +179,12 @@ class NavidromeSelectorApp(App):
 
             accepted = await viewer.result_future
 
-            if not accepted or accepted is None:
+            if accepted is None:
+                self.exit_app = True
+                return
+            elif not accepted:
                 self.notify("Merge cancelled.", severity="warning")
                 self.skipped_missing_ids.add(missing.id)
-                self.exit_app = True
                 return
 
         self.db.replace_song(missing, target, combined)

@@ -159,9 +159,11 @@ class DBQuery:
             (user_id, song.id),
         )
 
-    def delete_media_file(self, song: Song):
+    def delete_media_file(self, song: Song, commit: bool = False):
         logging.debug(f"Deleting media file with id: {song.id}")
         self.cur.execute("DELETE FROM media_file WHERE id = ?", (song.id,))
+        if commit:
+            self.connection.commit()
 
     def get_playlists_of_song(self, song: Song) -> list[Playlist]:
         self.cur.execute(
