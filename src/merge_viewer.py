@@ -54,7 +54,7 @@ class MergeViewer(Widget, can_focus=True):
         missing: Song,
         target: Song,
         missing_anno: Annotation,
-        target_anno: Annotation,
+        target_anno: Annotation | None,
         anno_merged: Annotation,
     ):
         super().__init__()
@@ -98,7 +98,9 @@ class MergeViewer(Widget, can_focus=True):
             f"Album : {song.album}\n"
         )
 
-    def _section_anno(self, title: str, anno: Annotation) -> str:
+    def _section_anno(self, title: str, anno: Annotation | None) -> str:
+        if anno is None:
+            return f"{title}\nNo annotation found."
         return (
             f"{title}\n"
             f"Play Count: {anno.play_count}\n"

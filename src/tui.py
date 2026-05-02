@@ -158,21 +158,16 @@ class NavidromeSelectorApp(App):
                 f"No annotation found for missing song '{missing.title}', file will be deleted, since no data is connected to it.",
                 severity="information",
             )
-            self.db.delete_media_file(missing, commit=True)
+            self.db.delete_media_file(missing)
             return
 
         anno_target = self.db.get_annotation(target, anno_missing.user_id)
 
         if anno_target is None:
-            self.notify(
-                f"No annotation found for target song '{target.title}', aborting merge.",
-                severity="warning",
-            )
-            self.skipped_missing_ids.add(missing.id)
+            combined = anno_missing
+        else:
+            combined = self.merge_strategy.merge(anno_missing, anno_target)
 
-            return
-
-        combined = self.merge_strategy.merge(anno_missing, anno_target)
         if not self.auto_confirm:
             viewer = MergeViewer(missing, target, anno_missing, anno_target, combined)
             await self.mount(viewer)

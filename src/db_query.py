@@ -119,7 +119,31 @@ class DBQuery:
         logging.debug(f"found annotation for {song.id}: {annotation}")
         return annotation
 
-    def set_annotation(self, song: Song, annot: Annotation, user_id: str):
+    def create_annotation(self, song: Song, annot: Annotation, commit: bool = True):
+        logging.debug(
+            f"Creating annotation for {song.id} and user {annot.user_id}: {annot}"
+        )
+        self.cur.execute(
+            """
+            INSERT INTO annotation (item_id, item_type, user_id, play_count, rating, starred, starred_at, rated_at)
+            VALUES (?, 'media_file', ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                song.id,
+                annot.user_id,
+                annot.play_count,
+                annot.rating,
+                annot.starred,
+                annot.starred_at,
+                annot.rated_at,
+            ),
+        )
+        if commit:
+            self.connection.commit()
+
+    def set_annotation(
+        self, song: Song, annot: Annotation, user_id: str, commit: bool = True
+    ):
         logging.debug(f"Setting annotation for {song.id} and user {user_id}: {annot}")
 
         self.cur.execute(
@@ -147,6 +171,10 @@ class DBQuery:
             ),
         )
 
+        if self.cur.rowcount == 0:
+            self.create_annotation(song, annot, commit=commit)
+        self.connection.commit()
+
     def delete_annotation(self, song: Song, user_id: str):
         logging.debug(f"Deleting annotation for {song.id} and user {user_id}")
         self.cur.execute(
@@ -159,7 +187,7 @@ class DBQuery:
             (user_id, song.id),
         )
 
-    def delete_media_file(self, song: Song, commit: bool = False):
+    def delete_media_file(self, song: Song, commit: bool = True):
         logging.debug(f"Deleting media file with id: {song.id}")
         self.cur.execute("DELETE FROM media_file WHERE id = ?", (song.id,))
         if commit:
@@ -244,7 +272,7 @@ class DBQuery:
 
                 # ! REMOVE .commit() from inside these helper methods!
                 self.delete_annotation(old_song, new_annotation.user_id)
-                self.delete_media_file(old_song)
+                self.delete_media_file(old_song, commit=False)
 
         except Exception as e:
             self.connection.rollback()
