@@ -256,6 +256,9 @@ class DBQuery:
         )
         return [r["id"] for r in rows]
 
+    def commit(self):
+        self.connection.commit()
+
     def replace_song(self, old_song: Song, new_song: Song, new_annotation: Annotation):
         logging.debug(f"Replacing song {old_song.id} with {new_song.id}")
 

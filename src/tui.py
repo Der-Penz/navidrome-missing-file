@@ -109,6 +109,7 @@ class NavidromeSelectorApp(App):
                     break
 
                 await self.handle_merge(missing, target)
+                self.db.commit()  # ensure changes saved before next loop
         except asyncio.CancelledError:
             logging.info("Selection flow worker was cancelled.")
         finally:
