@@ -119,7 +119,7 @@ class DBQuery:
         logging.debug(f"found annotation for {song.id}: {annotation}")
         return annotation
 
-    def create_annotation(self, song: Song, annot: Annotation, commit: bool = True):
+    def create_annotation(self, song: Song, annot: Annotation):
         logging.debug(
             f"Creating annotation for {song.id} and user {annot.user_id}: {annot}"
         )
@@ -138,12 +138,8 @@ class DBQuery:
                 annot.rated_at,
             ),
         )
-        if commit:
-            self.connection.commit()
 
-    def set_annotation(
-        self, song: Song, annot: Annotation, user_id: str, commit: bool = True
-    ):
+    def set_annotation(self, song: Song, annot: Annotation, user_id: str):
         logging.debug(f"Setting annotation for {song.id} and user {user_id}: {annot}")
 
         self.cur.execute(
@@ -172,8 +168,7 @@ class DBQuery:
         )
 
         if self.cur.rowcount == 0:
-            self.create_annotation(song, annot, commit=commit)
-        self.connection.commit()
+            self.create_annotation(song, annot)
 
     def delete_annotation(self, song: Song, user_id: str):
         logging.debug(f"Deleting annotation for {song.id} and user {user_id}")
@@ -187,11 +182,9 @@ class DBQuery:
             (user_id, song.id),
         )
 
-    def delete_media_file(self, song: Song, commit: bool = True):
+    def delete_media_file(self, song: Song):
         logging.debug(f"Deleting media file with id: {song.id}")
         self.cur.execute("DELETE FROM media_file WHERE id = ?", (song.id,))
-        if commit:
-            self.connection.commit()
 
     def get_playlists_of_song(self, song: Song) -> list[Playlist]:
         self.cur.execute(

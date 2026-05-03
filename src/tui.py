@@ -160,6 +160,7 @@ class NavidromeSelectorApp(App):
                 severity="information",
             )
             self.db.delete_media_file(missing)
+            self.db.commit()
             return
 
         anno_target = self.db.get_annotation(target, anno_missing.user_id)
