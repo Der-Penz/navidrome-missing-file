@@ -9,8 +9,8 @@ When a Navidrome library contains a track that is no longer available on disk, t
 1. Pick a missing file entry.
 2. Pick a replacement track from the existing library, or let the tool try to auto-match one.
 3. Review the merge result.
-4. Confirm the merge.
-5. Write the updated annotation and playlist data back into the database.
+4. Confirm the merge (Only for the first user, subsequent users will have their annotations merged automatically if the first one is confirmed).
+5. Write the updated annotation for each user and playlist data back into the database.
 6. Delete the missing media-file record.
 
 ## Features
