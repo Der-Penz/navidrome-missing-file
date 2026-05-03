@@ -152,39 +152,70 @@ class NavidromeSelectorApp(App):
         return selected_song
 
     async def handle_merge(self, missing: Song, target: Song) -> None:
-        anno_missing = self.db.get_annotation(missing)
 
-        if anno_missing is None:
+        users = self.db.get_users()
+
+        if not users:
             self.notify(
-                f"No annotation found for missing song '{missing.title}', file will be deleted, since no data is connected to it.",
+                "No users found in the database. Cannot proceed with merge since no annotation data can be connected to the new file. Please create at least one user in Navidrome and run the app again.",
+                severity="error",
+            )
+            self.exit_app = True
+            return
+        found_annotation_for_missing = False
+
+        for i, user in enumerate(users):
+            logging.info(
+                f"Processing user '{user.name}' ({i + 1}/{len(users)}) for merge..."
+            )
+            first = i == 0
+
+            anno_missing = self.db.get_annotation(missing, user)
+
+            if anno_missing is None:
+                self.notify(
+                    f"No annotation from user '{user.name}' found for missing song '{missing.title}'",
+                    severity="information",
+                )
+                continue
+            found_annotation_for_missing = True
+
+            anno_target = self.db.get_annotation(target, user)
+
+            if anno_target is None:
+                combined = anno_missing
+            else:
+                combined = self.merge_strategy.merge(anno_missing, anno_target)
+
+            if not self.auto_confirm and first:
+                viewer = MergeViewer(
+                    missing, target, anno_missing, anno_target, combined
+                )
+                await self.mount(viewer)
+
+                accepted = await viewer.result_future
+
+                if accepted is None:
+                    self.exit_app = True
+                    return
+                elif not accepted:
+                    self.notify("Merge cancelled.", severity="warning")
+                    self.skipped_missing_ids.add(missing.id)
+                    continue
+
+            self.db.replace_song(missing, target, combined, user)
+            self.db.commit()
+
+        if not found_annotation_for_missing:
+            self.notify(
+                f"No annotations found for missing song '{missing.title}' from any user. Deleting the missing file entry.",
                 severity="information",
             )
-            self.db.delete_media_file(missing)
-            self.db.commit()
-            return
 
-        anno_target = self.db.get_annotation(target, anno_missing.user_id)
+        self.db.repair_playlist(missing, target)
 
-        if anno_target is None:
-            combined = anno_missing
-        else:
-            combined = self.merge_strategy.merge(anno_missing, anno_target)
-
-        if not self.auto_confirm:
-            viewer = MergeViewer(missing, target, anno_missing, anno_target, combined)
-            await self.mount(viewer)
-
-            accepted = await viewer.result_future
-
-            if accepted is None:
-                self.exit_app = True
-                return
-            elif not accepted:
-                self.notify("Merge cancelled.", severity="warning")
-                self.skipped_missing_ids.add(missing.id)
-                return
-
-        self.db.replace_song(missing, target, combined)
+        self.db.delete_media_file(missing)
+        self.db.commit()
 
         if self.report:
             with open("merge_report.txt", "a") as f:

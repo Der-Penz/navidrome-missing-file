@@ -86,7 +86,7 @@ class MergeViewer(Widget, can_focus=True):
 
         with Container(id="footer"):
             yield Static(
-                "✔ Enter: accept   ✖ q: cancel   x: exit app",
+                "✔ Enter: accept for all users   ✖ q: cancel   x: exit app",
                 id="footer",
             )
 

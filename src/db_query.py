@@ -23,6 +23,12 @@ class Playlist:
 
 
 @dataclass
+class User:
+    id: str
+    name: str
+
+
+@dataclass
 class Annotation:
     play_count: int
     rating: int
@@ -80,29 +86,37 @@ class DBQuery:
             )
         return songs
 
-    def get_annotation(
-        self, song: Song, user_id: str | None = None
-    ) -> Annotation | None:
-        if user_id is None:
-            self.cur.execute(
-                """
-            SELECT *
-            FROM annotation
-            WHERE item_id = ?
-            LIMIT 1
+    def get_users(self) -> list[User]:
+        self.cur.execute(
+            """
+            SELECT id, name
+            FROM user
             """,
-                (song.id,),
+        )
+
+        rows = self.cur.fetchall()
+        logging.debug(f"Found {len(rows)} users in the database")
+
+        users: list[User] = []
+        for r in rows:
+            users.append(
+                User(
+                    id=r["id"],
+                    name=r["name"],
+                )
             )
-        else:
-            self.cur.execute(
-                """
-            SELECT *
-            FROM annotation
-            WHERE item_id = ? AND user_id = ?
-            LIMIT 1
-            """,
-                (song.id, user_id),
-            )
+        return users
+
+    def get_annotation(self, song: Song, user: User) -> Annotation | None:
+        self.cur.execute(
+            """
+        SELECT *
+        FROM annotation
+        WHERE item_id = ? AND user_id = ?
+        LIMIT 1
+        """,
+            (song.id, user.id),
+        )
 
         row = self.cur.fetchone()
 
@@ -116,7 +130,9 @@ class DBQuery:
             rated_at=row["rated_at"],
             user_id=row["user_id"],
         )
-        logging.debug(f"found annotation for {song.id}: {annotation}")
+        logging.debug(
+            f"found annotation for {song.id} from user {user.name}: {annotation}"
+        )
         return annotation
 
     def create_annotation(self, song: Song, annot: Annotation):
@@ -139,8 +155,8 @@ class DBQuery:
             ),
         )
 
-    def set_annotation(self, song: Song, annot: Annotation, user_id: str):
-        logging.debug(f"Setting annotation for {song.id} and user {user_id}: {annot}")
+    def set_annotation(self, song: Song, annot: Annotation, user: User):
+        logging.debug(f"Setting annotation for {song.id} and user {user.id}: {annot}")
 
         self.cur.execute(
             """
@@ -162,7 +178,7 @@ class DBQuery:
                 annot.starred,
                 annot.starred_at,
                 annot.rated_at,
-                user_id,
+                user.id,
                 song.id,
             ),
         )
@@ -170,8 +186,8 @@ class DBQuery:
         if self.cur.rowcount == 0:
             self.create_annotation(song, annot)
 
-    def delete_annotation(self, song: Song, user_id: str):
-        logging.debug(f"Deleting annotation for {song.id} and user {user_id}")
+    def delete_annotation(self, song: Song, user: User):
+        logging.debug(f"Deleting annotation for {song.id} and user {user.id}")
         self.cur.execute(
             """
             DELETE FROM annotation
@@ -179,7 +195,7 @@ class DBQuery:
             AND item_id = ?
             AND item_type = 'media_file'
             """,
-            (user_id, song.id),
+            (user.id, song.id),
         )
 
     def delete_media_file(self, song: Song):
@@ -252,25 +268,35 @@ class DBQuery:
     def commit(self):
         self.connection.commit()
 
-    def replace_song(self, old_song: Song, new_song: Song, new_annotation: Annotation):
-        logging.debug(f"Replacing song {old_song.id} with {new_song.id}")
+    def replace_song(
+        self,
+        old_song: Song,
+        new_song: Song,
+        new_annotation: Annotation,
+        user: User,
+    ):
+        logging.debug(
+            f"Replacing song {old_song.id} with {new_song.id} for user {user.id}"
+        )
 
         try:
             with self.connection:
-                self.set_annotation(new_song, new_annotation, new_annotation.user_id)
+                self.set_annotation(new_song, new_annotation, user)
 
-                playlists = self.get_playlists_of_song(old_song)
-                for playlist in playlists:
-                    positions = self.get_playlist_positions(playlist, old_song)
-                    for pos in positions:
-                        self.remove_from_playlist(playlist, old_song)
-                        self.add_to_playlist(playlist, new_song, playlist_position=pos)
-
-                # ! REMOVE .commit() from inside these helper methods!
-                self.delete_annotation(old_song, new_annotation.user_id)
-                self.delete_media_file(old_song, commit=False)
+                self.delete_annotation(old_song, user)
 
         except Exception as e:
             self.connection.rollback()
             logging.error(f"Failed to replace song: {e}")
             raise
+
+    def repair_playlist(self, old_song: Song, new_song: Song):
+        logging.debug(
+            f"Repairing playlists by replacing song {old_song.id} with {new_song.id}"
+        )
+        playlists = self.get_playlists_of_song(old_song)
+        for playlist in playlists:
+            positions = self.get_playlist_positions(playlist, old_song)
+            for pos in positions:
+                self.remove_from_playlist(playlist, old_song)
+                self.add_to_playlist(playlist, new_song, playlist_position=pos)
