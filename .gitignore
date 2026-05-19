@@ -13,3 +13,4 @@ navidrome.db.bak
 navidrome.db
 navidrome.db-wal
 navidrome.db-shm
+merge_report.txt

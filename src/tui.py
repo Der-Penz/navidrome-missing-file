@@ -218,7 +218,7 @@ class NavidromeSelectorApp(App):
         self.db.commit()
 
         if self.report:
-            with open("merge_report.txt", "a") as f:
+            with open("merge_report.txt", "a", encoding="utf-8") as f:
                 f.write(
                     f'"{missing.title}","{missing.artist}","{missing.album}",{missing.id},'
                     f'"{target.title}","{target.artist}","{target.album}",{target.id}\n'
