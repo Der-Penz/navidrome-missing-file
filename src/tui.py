@@ -201,7 +201,10 @@ class NavidromeSelectorApp(App):
                 elif not accepted:
                     self.notify("Merge cancelled.", severity="warning")
                     self.skipped_missing_ids.add(missing.id)
-                    continue
+                    logging.info(
+                        f"cancelling merge for missing song ID {missing.id} based on user input."
+                    )
+                    return
 
             self.db.replace_song(missing, target, combined, user)
             self.db.commit()
