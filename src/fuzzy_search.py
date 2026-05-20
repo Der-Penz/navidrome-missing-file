@@ -36,7 +36,7 @@ def _song_score(song, q: str) -> int:
         score += 160
 
     if q in album:
-        score += 120
+        score += 50
 
     score += int(fuzz.partial_ratio(q, title) * 0.8)
     score += int(fuzz.token_set_ratio(q, full) * 0.4)
